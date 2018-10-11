@@ -1,0 +1,455 @@
+<aura:component controller="AccountListController" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+	<aura:attribute name="data" type="Object"/>
+    <aura:attribute name="columns" type="List"/>
+    <aura:attribute name="renderDetail" type="Boolean" default="false"/>
+    <aura:attribute name="selectedRows" type="List"/>
+    <aura:attribute name="selectedRecordId" type="String" default=""/>
+    <aura:attribute name="accountDetailFields" type="List" default="['Name','AccountNumber','OwnerId','AccountSource','ParentId','AnnualRevenue','Type','CreatedById','LastModifiedById','Industry','Description','Phone','Fax']" />
+    <aura:attribute name="newAccountDilogBoxOpen" type="Boolean" default="false"/>
+    <!--<aura:attribute name="editDilogBoxOpen" type="Boolean" default="false"/>-->
+    <aura:attribute name="editRecordId" type="String" default=""/>
+    <aura:attribute name="toastMessage" type="String" default=""/>
+    <aura:attribute name="toastTitle" type="String" default=""/>
+    <aura:attribute name="isSuccess" type="Boolean" default="false"/>
+    <aura:attribute name="accSources" type="String[]"/>
+    
+    <aura:handler name="init" value="{! this }" action="{! c.init }"/>
+    <aura:registerEvent name="showToast" type="force:showToast" />
+    
+    <lightning:spinner variant="brand" size="large" aura:id="userSpinner"/>
+    
+    <!--Toast Starts-->
+    <div id="toastDiv" class="demo-only" style="height: 4rem; display:none;">
+      <div class="slds-notify_container slds-is-relative">
+        <aura:if isTrue="{!v.isSuccess}">
+        <div class="slds-notify slds-notify_toast slds-theme_success" role="status">
+          <span class="slds-assistive-text">success</span>
+          <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+             <lightning:icon variant="inverse" iconName="utility:success" size="small"/>
+          </span>
+          <div class="slds-notify__content">
+            <h2 class="slds-text-heading_small ">{!v.toastMessage}</h2>
+          </div>
+          <div class="slds-notify__close">
+            <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeToast}">
+              <lightning:icon variant="inverse" iconName="utility:close" size="small"/>
+              <span class="slds-assistive-text">Close</span>
+            </button>
+          </div>
+        </div>
+        <aura:set attribute="else">
+          <div class="slds-notify slds-notify_toast slds-theme_error" role="status">
+              <span class="slds-assistive-text">error</span>
+              <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                <lightning:icon variant="inverse" iconName="utility:error" size="small"/>
+              </span>
+              <div class="slds-notify__content">
+                <h2 class="slds-text-heading_small ">{!v.toastMessage}</h2>
+              </div>
+              <div class="slds-notify__close">
+                <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeToast}">
+                  <lightning:icon variant="inverse" iconName="utility:close" size="small"/>
+                  <span class="slds-assistive-text">Close</span>
+                </button>
+              </div>
+            </div>
+           </aura:set>
+         </aura:if>
+      </div>
+    </div>
+    <!--Toast Ends -->
+    
+    <lightning:card title="Account List" iconName="standard:account">
+        <aura:set attribute="actions">
+            <lightning:button class="button-style" label="New" variant="brand" onclick="{! c.addNewAccount }"/>
+            <lightning:button class="button-style" label="Update Account Source" variant="brand" onclick="{! c.handleMultipleEdit }"/>
+            <lightning:button class="button-style" label="Delete" variant="brand" onclick="{! c.deleteAccounts }"/>
+        </aura:set>
+        
+    	<table aura:id="tableId" class="slds-table slds-scrollable_x slds-table_bordered slds-table_cell-buffer inlineBlock slds-p-around_small">
+            	<thead>
+                	<tr class="slds-line-height_reset">
+                        <th scope="col" class="slds-text-title_caps">
+                            <div class="slds-truncate" title="Sl. No.">Sl. No.</div>
+                        </th>
+                        <th scope="col">
+                            <ui:inputCheckbox aura:id="selectAllcheckbox" change="{!c.handleSelectAll}"/>
+                        </th>
+                    	<th scope="col" class="slds-text-title_caps">
+                            <div class="slds-truncate" title="Account Name">Account Name</div>
+                    	</th>
+                        <th scope="col" class="slds-text-title_caps">
+                            <div class="slds-truncate" title="Account Number">Account Number</div>
+                    	</th>
+                        <th scope="col" class="slds-text-title_caps">
+                            <div class="slds-truncate" title="Account Owner">Account Owner</div>
+                    	</th>
+                        <th scope="col" class="slds-text-title_caps">
+                            <div class="slds-truncate" title="Account Source">Account Source</div>
+                    	</th>
+                        <th scope="col" class="slds-text-title_caps">
+                            <div class="slds-truncate" title="Annual Revenue">Annual Revenue</div>
+                    	</th>
+                        <th scope="col" class="slds-text-title_caps">
+                            <div class="slds-truncate" title="Type">Type</div>
+                    	</th>
+                        <th scope="col" class="slds-text-title_caps">
+                            <div class="slds-truncate" title="Industry">Industry</div>
+                    	</th>
+                        <th scope="col" class="slds-text-title_caps">
+                            <div class="slds-truncate" title="Created By">Created By</div>
+                    	</th>
+                        <th scope="col" class="slds-text-title_caps">
+                            <div class="slds-truncate" title="Edit">Edit</div>
+                    	</th>
+                        <th scope="col" class="slds-text-title_caps">
+                            <div class="slds-truncate" title="Delete">Delete</div>
+                    	</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <aura:iteration items="{!v.data}" var="row" indexVar="sNo">
+                        <tr>
+                            <!--<td>
+                                <aura:renderIf isTrue="{!!v.syncComplete}">
+                                    <ui:outputText value="{!row.userRole}"/>
+                                </aura:renderIf>
+                                <aura:renderIf isTrue="{!v.syncComplete}">
+                                    <ui:outputURL class="{!row.uniqueName}" aura:id="oUrl" value="" label="{!row.userRole}" click="{!c.navigateToModifyUserCmp}"/>
+                                </aura:renderIf>
+                            </td>-->
+                            <td>
+                            	<ui:outputText value="{!sNo +1}"/>
+                            </td>
+                            <td>
+                            	<ui:inputCheckbox aura:id="checkId" name="{!sNo}" change="{!c.handleRowSelection}"/>
+                            </td>
+                            <td>
+                            	<ui:outputText value="{!row.Name}"/>
+                            </td>
+                            <td>
+                            	<ui:outputText value="{!row.AccountNumber}"/>
+                            </td>
+                            <td>
+                            	<ui:outputText value="{!row.OwnerName}"/>
+                            </td>
+                            <td>
+                            	<ui:outputText value="{!row.AccountSource}"/>
+                            </td>
+                            <td>
+                            	<!--<ui:outputText value="{!row.AnnualRevenue}"/>-->
+                                <ui:outputCurrency value="{!row.AnnualRevenue}"/>
+                            </td>
+                            <td>
+                            	<ui:outputText value="{!row.Type}"/>
+                            </td>
+                            <td>
+                            	<ui:outputText value="{!row.Industry}"/>
+                            </td>
+                            <td>
+                            	<ui:outputText value="{!row.CreatedByName}"/>
+                            </td>
+                            <td>
+                            	<ui:outputURL class="{!sNo}" label="Edit" click="{!c.editAccount}"/>
+                            </td>
+                            <td>
+                            	<ui:outputURL class="{!sNo}" label="Delete" click="{!c.deleteAccount}"/>
+                            </td>
+                        </tr>
+                    </aura:iteration>
+                </tbody>
+            </table>
+        
+        <!--<lightning:datatable aura:id="accountList" 
+                    keyField="Id"
+                    data="{! v.data }"
+                    columns="{! v.columns }"
+                    showRowNumberColumn="true" 
+                    onrowselection="{! c.handleRowSelection }"/>-->
+        
+    </lightning:card>
+    
+    <aura:renderIf isTrue="{!v.renderDetail}">
+        <lightning:card class="accountDetail" title="Account Detail" iconName="utility:summarydetail">
+            <aura:if isTrue="{!!empty(v.selectedRecordId)}">
+            <lightning:recordViewForm recordId="{!v.selectedRecordId}" objectApiName="Account">
+                <div class="slds-box slds-theme_default">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning:outputField fieldName="Name" />
+                        </div>
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning:outputField fieldName="AccountNumber"/>
+                        </div>
+                    </div>
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning:outputField fieldName="OwnerId" />
+                        </div>
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning:outputField fieldName="AccountSource" />
+                        </div>
+                    </div>
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning:outputField fieldName="ParentId" />
+                        </div>
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning:outputField fieldName="AnnualRevenue" />
+                        </div>
+                    </div>
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning:outputField fieldName="Type" />
+                        </div>
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning:outputField fieldName="CreatedById" />
+                        </div>
+                    </div>
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning:outputField fieldName="LastModifiedById" />
+                        </div>
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning:outputField fieldName="Industry" />
+                        </div>
+                    </div>
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning:outputField fieldName="Description" />
+                        </div>
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning:outputField fieldName="Phone" />
+                        </div>
+                    </div>
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_1-of-2">
+                            <lightning:outputField fieldName="Fax" />
+                        </div>
+                    </div>
+                </div>
+            </lightning:recordViewForm>
+            </aura:if>
+            <!--<lightning:recordForm 
+                 recordId="{!v.selectedRecordId}" 
+                 objectApiName="Account" 
+                 fields="{!v.accountDetailFields}"
+                 columns="2"
+                 mode="readonly"/>-->
+            
+        </lightning:card>
+    </aura:renderIf>
+    
+    <!--New Modal Box-->
+    <div class="slds-m-around--xxx-large slds-scrollable" style="height: 50%;">
+        <aura:if isTrue="{!v.newAccountDilogBoxOpen}">
+            <div role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-slide-down-cancel slds-modal_large">
+                <div class="slds-modal__container">
+                    <!-- ###### MODAL BOX HEADER Part Start From Here ######-->
+                    <div class="slds-modal__header">
+                        <button class="slds-button slds-modal__close slds-button--icon-inverse" title="Close" onclick="{!c.closeModel}">
+                            X
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                        <div class="slds-col">
+                            <div class="slds-p-around_small slds-text-heading--medium">New Account</div>
+                        </div>
+                    </div>
+                    <!--###### MODAL BOX BODY Part Start From Here ######-->
+                    <div class="slds-modal__content slds-p-around--medium" style="height:400px">
+                        <div class="slds-scrollable">
+                                    <lightning:recordEditForm aura:id="recordForm" objectApiName="Account" onsuccess="{!c.handleAddSuccess}" onerror="{!c.handleError}">
+                                    <lightning:messages />
+                                    <div class="slds-box slds-theme_default">
+                                        <div class="slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_1-of-2 slds-p-right-small">
+                                                <lightning:inputField fieldName="Name" />
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2 slds-p-left-small">
+                                                <lightning:inputField fieldName="AccountNumber"/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="AccountSource" />
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="ParentId" />
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="AnnualRevenue" />
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Type" />
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Industry" />
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Description" />
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Phone" />
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Fax" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <footer class="slds-modal__footer">
+                                        <lightning:button variant="neutral" label="Cancel" onclick="{!c.closeModel}"/>
+                                        <lightning:button aura:id="submit" label="Save" variant="brand" type="submit"/>
+                                    </footer>
+                                    </lightning:recordEditForm>
+                                   <!--<lightning:card class="slds-p-around_large">
+                                   <lightning:recordForm 
+                                     objectApiName="Account" 
+                                     layoutType="Full"
+                                     columns="2"
+                                     onsuccess="{!c.handleSuccess}"/>
+                                    
+                                   </lightning:card>-->
+                                   
+                                 </div>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-backdrop slds-backdrop--open"></div>
+        </aura:if>
+    </div>
+    
+    <!-- Edit Modal Box-->
+    <div class="slds-m-around--xxx-large slds-scrollable" style="height: 50%;">
+        <!--<aura:if isTrue="{!v.editDilogBoxOpen}">-->
+        <div id="editDiv" style="display:none;">
+            <div role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-slide-down-cancel slds-modal_large">
+                <div class="slds-modal__container">
+                    <!-- ###### MODAL BOX HEADER Part Start From Here ######-->
+                    <div class="slds-modal__header">
+                        <button class="slds-button slds-modal__close slds-button--icon-inverse" title="Close" onclick="{!c.closeModel}">
+                            X
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                        <div class="slds-col">
+                            <div class="slds-p-around_small slds-text-heading--medium">Edit Account</div>
+                        </div>
+                    </div>
+                    <!--###### MODAL BOX BODY Part Start From Here ######-->
+                    <div class="slds-modal__content slds-p-around--medium" style="height:400px">
+                        <div class="slds-scrollable">
+                                    <lightning:recordEditForm aura:id="recordEditForm" recordId="{!v.editRecordId}" objectApiName="Account" onsuccess="{!c.handleEditSuccess}" onerror="{!c.handleError}">
+                                    <lightning:messages />
+                                    <div class="slds-box slds-theme_default">
+                                        <div class="slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_1-of-2 slds-p-right-small">
+                                                <lightning:inputField fieldName="Name" />
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2 slds-p-left-small">
+                                                <lightning:inputField fieldName="AccountNumber"/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="AccountSource" />
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="ParentId" />
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="AnnualRevenue" />
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Type" />
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Industry" />
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Description" />
+                                            </div>
+                                        </div>
+                                        <div class="slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Phone" />
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField fieldName="Fax" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <footer class="slds-modal__footer">
+                                        <lightning:button variant="neutral" label="Cancel" onclick="{!c.closeModel}"/>
+                                        <lightning:button aura:id="submit" label="Save" variant="brand" type="submit"/>
+                                    </footer>
+                                    </lightning:recordEditForm>
+                                 </div>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-backdrop slds-backdrop--open"></div>
+        <!--</aura:if>-->
+        </div>
+    </div>
+    
+    <!-- Multiple Edit Modal Box-->
+    <div class="slds-m-around--x-large slds-scrollable" style="height: 50%;">
+        <div id="multipleEditDiv" style="display:none;">
+            <div role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-slide-down-cancel slds-modal_medium">
+                <div class="slds-modal__container">
+                    <!-- ###### MODAL BOX HEADER Part Start From Here ######-->
+                    <div class="slds-modal__header">
+                        <button class="slds-button slds-modal__close slds-button--icon-inverse" title="Close" onclick="{!c.closeModel}">
+                            X
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                        <div class="slds-col">
+                            <div class="slds-p-around_small slds-text-heading--medium">Update Account Source</div>
+                        </div>
+                    </div>
+                    <!--###### MODAL BOX BODY Part Start From Here ######-->
+                    <div class="slds-modal__content slds-p-around--medium">
+                        <div class="slds-scrollable">
+                            <div class="slds-box slds-theme_default">
+                                <lightning:recordEditForm aura:id="editPicklist" objectApiName="Account">
+                                    <div class="slds-box slds-theme_default">
+                                        <div class="slds-grid slds-gutters">
+                                            <div class="slds-col slds-size_1-of-2">
+                                                <lightning:inputField aura:id="newAccountSource" fieldName="AccountSource"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-box slds-theme_default">
+                                        <div>
+                                        	Selected Records
+                                        </div>
+                                        <lightning:datatable aura:id="selectedAccountList" 
+                                            keyField="Id"
+                                            data="{! v.selectedRows }"
+                                            columns="{! v.columns }"
+                                            hideCheckboxColumn="true"/>
+                                    </div>
+                                </lightning:recordEditForm>
+                                <footer class="slds-modal__footer">
+                                    <lightning:button variant="neutral" label="Cancel" onclick="{!c.closeModel}"/>
+                                    <lightning:button aura:id="submit" label="Update" variant="brand" type="submit" onclick="{!c.updateAccounts}"/>
+                                </footer>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-backdrop slds-backdrop--open"></div>
+        </div>
+    </div>
+    
+</aura:component>

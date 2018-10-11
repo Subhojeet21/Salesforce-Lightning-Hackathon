@@ -5,9 +5,11 @@
        src="https://raw.githubusercontent.com/afawcett/githubsfdeploy/master/src/main/webapp/resources/img/deploy.png">
 </a>
 
+
 # Case Studies 
-Case Study 1:
-==================
+
+1:
+==
 
 We want to implement following functionality:
 
@@ -41,8 +43,8 @@ We want to implement following functionality:
 	Phone
 	Fax
 
-Case Study 2:
-==================
+2:
+==
 
 We want to implement following functionality:
 
@@ -67,8 +69,8 @@ We want to implement following functionality:
 9.	User should be able to delete an account record by clicking ‘Delete’ link appearing in front of each record in list. A confirmation pop-up should appear for deletion.
 10.	After confirming delete the record should be deleted, and list of records should be refreshed. 
 
-Case Study 2:
-==================
+3:
+==
 
 We want to implement following functionality:
 
